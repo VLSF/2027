@@ -1,0 +1,667 @@
+<!--
+  Adapted from Eigendrum (https://eigendrum.com | https://github.com/BaselAshraf81/eigendrum)
+  Original work Copyright (c) Basel Ashraf. Used for non-commercial academic purposes with attribution.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Drum Comparison</title>
+<style>
+  :root {
+    --bg: #fcfcfa;
+    --card-bg: #ffffff;
+    --border: #e5e4de;
+    --text: #222220;
+    --muted: #6e6d68;
+    --rim: #1f1f1d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615;
+      --card-bg: #1e1e1c;
+      --border: #333330;
+      --text: #ededeb;
+      --muted: #9a9992;
+      --rim: #e6e5e0;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .drums-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 780px;
+  }
+  @media (max-width: 520px) {
+    .drums-grid { grid-template-columns: 1fr; }
+  }
+  .drum-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .drum-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .canvas-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 320px;
+    position: relative;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 6px;
+  }
+  .hint {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--muted);
+    text-align: center;
+  }
+  .hint a {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="drums-grid">
+  <div class="drum-card">
+    <div class="drum-title" id="label-left">Drum I</div>
+    <div class="canvas-wrap">
+      <canvas id="canvas-left" aria-label="Left interactive drumhead"></canvas>
+    </div>
+  </div>
+  <div class="drum-card">
+    <div class="drum-title" id="label-right">Drum II</div>
+    <div class="canvas-wrap">
+      <canvas id="canvas-right" aria-label="Right interactive drumhead"></canvas>
+    </div>
+  </div>
+</div>
+<div class="hint">
+  Click or tap anywhere on either drumhead to strike it. Adapted from <a href="https://eigendrum.com" target="_blank" rel="noopener noreferrer">Eigendrum</a> by <a href="https://github.com/BaselAshraf81/eigendrum" target="_blank" rel="noopener noreferrer">Basel Ashraf</a>.
+</div>
+
+<script>
+/**
+ * CONFIGURATION:
+ * Pre-configured for Circle vs. Equilateral Triangle.
+ * Adjust `yOffset` on `triangle` below (e.g. -0.10 to -0.18) to fine-tune vertical alignment.
+ */
+const LEFT_SHAPE  = 'circle';
+const RIGHT_SHAPE = 'triangle';
+
+// Fixed physical synthesis parameters (tuned for a warm felt mallet)
+const REF_CIRCLE_HZ = 160.0;
+const CIRCLE_LAMBDA1 = 5.78318596; // j_{0,1}^2 * pi (unit-area circle first eigenvalue)
+const NUM_MODES = 16;
+const GRID_N = 28; // FEM grid resolution per axis
+const BASE_DAMPING = 1.65;
+const RAYLEIGH_ALPHA = 0.0060; // Faster high-frequency overtone damping
+const MALLET_SIGMA = 0.75;    // Softer, wider Gaussian mallet footprint
+
+// Shape definitions (normalized to unit area automatically by solver)
+const SHAPES = {
+  circle: {
+    name: "Circular Drum",
+    polygon: Array.from({length: 64}, (_, i) => {
+      const a = (2 * Math.PI * i) / 64;
+      return [Math.cos(a), Math.sin(a)];
+    }),
+    yOffset: 0
+  },
+  triangle: {
+    name: "Equilateral Triangle Drum",
+    polygon: [[0, 1.15], [-1.0, -0.58], [1.0, -0.58]],
+    yOffset: -0.12 // Negative shifts the triangle downwards to align optically with the circle
+  },
+  square: {
+    name: "Square Drum",
+    polygon: [[-1,-1], [1,-1], [1,1], [-1,1]],
+    yOffset: 0
+  },
+  ellipse: {
+    name: "Elliptical Drum (1.6 : 1)",
+    polygon: Array.from({length: 64}, (_, i) => {
+      const a = (2 * Math.PI * i) / 64;
+      return [1.265 * Math.cos(a), 0.79 * Math.sin(a)];
+    }),
+    yOffset: 0
+  },
+  star: {
+    name: "Five-Lobed Drum",
+    polygon: Array.from({length: 90}, (_, i) => {
+      const a = (2 * Math.PI * i) / 90;
+      const r = 1 + 0.26 * Math.cos(5 * a);
+      return [r * Math.cos(a), r * Math.sin(a)];
+    }),
+    yOffset: 0
+  },
+  kac1: {
+    name: "GWW I",
+    polygon: [[2, 0], [3, 1], [3, 2], [2, 2], [1, 2], [1, 3], [0, 2], [1, 1], [2, 1]],
+    yOffset: 0
+  },
+  kac2: {
+    name: "GWW II",
+    polygon: [[2, 0], [2, 1], [3, 1], [2, 2], [1, 2], [1, 3], [0, 3], [0, 2], [1, 1]],
+    yOffset: 0
+  }
+};
+
+// Point-in-polygon test (ray-casting)
+function pointInPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1];
+    const xj = poly[j][0], yj = poly[j][1];
+    const intersect = ((yi > y) !== (yj > y)) &&
+                      (x < (xj - xi) * (y - yi) / (yj - yi + 1e-15) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// Compute polygon signed area & centroid, then normalize to unit area = 1.0
+function normalizePolygon(rawPoly) {
+  let area = 0, cx = 0, cy = 0;
+  const n = rawPoly.length;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = rawPoly[i];
+    const [x1, y1] = rawPoly[(i + 1) % n];
+    const cross = x0 * y1 - x1 * y0;
+    area += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  area *= 0.5;
+  cx /= (6 * area);
+  cy /= (6 * area);
+  const scale = 1.0 / Math.sqrt(Math.abs(area));
+  const normPoly = rawPoly.map(([x, y]) => [(x - cx) * scale, (y - cy) * scale]);
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of normPoly) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  return { poly: normPoly, minX, maxX, minY, maxY };
+}
+
+/**
+ * Finite-Difference / Courant P1 Finite Element solver on uniform right-isosceles triangulation
+ * Solves -Laplacian u = lambda u in Omega, u = 0 on dOmega (unit area scaled).
+ */
+function buildAndSolveDrum(shapeDef) {
+  const { poly, minX, maxX, minY, maxY } = normalizePolygon(shapeDef.polygon);
+  const span = Math.max(maxX - minX, maxY - minY) * 1.08;
+  const h = span / GRID_N;
+  const x0 = (minX + maxX) / 2 - span / 2;
+  const y0 = (minY + maxY) / 2 - span / 2;
+
+  // Map interior grid vertices
+  const idxMap = new Int32Array((GRID_N + 1) * (GRID_N + 1)).fill(-1);
+  const nodesX = [];
+  const nodesY = [];
+
+  for (let j = 0; j <= GRID_N; j++) {
+    const y = y0 + j * h;
+    for (let i = 0; i <= GRID_N; i++) {
+      const x = x0 + i * h;
+      if (pointInPoly(x, y, poly)) {
+        idxMap[j * (GRID_N + 1) + i] = nodesX.length;
+        nodesX.push(x);
+        nodesY.push(y);
+      }
+    }
+  }
+
+  const m = nodesX.length;
+  const h2 = 1.0 / m;
+  const invH2 = 1.0 / h2;
+
+  // Build sparse 5-point Laplacian operator
+  const nbrs = Array.from({length: m}, () => []);
+  for (let j = 0; j <= GRID_N; j++) {
+    for (let i = 0; i <= GRID_N; i++) {
+      const u = idxMap[j * (GRID_N + 1) + i];
+      if (u < 0) continue;
+      const offsets = [[1,0],[-1,0],[0,1],[0,-1]];
+      for (const [di, dj] of offsets) {
+        const ni = i + di, nj = j + dj;
+        if (ni >= 0 && ni <= GRID_N && nj >= 0 && nj <= GRID_N) {
+          const v = idxMap[nj * (GRID_N + 1) + ni];
+          if (v >= 0) nbrs[u].push(v);
+        }
+      }
+    }
+  }
+
+  // Extract triangle mesh for smooth canvas rendering
+  const allVertsX = [];
+  const allVertsY = [];
+  const allVertInteriorIdx = [];
+  const gridToVert = new Int32Array((GRID_N + 1) * (GRID_N + 1)).fill(-1);
+
+  for (let j = 0; j <= GRID_N; j++) {
+    const y = y0 + j * h;
+    for (let i = 0; i <= GRID_N; i++) {
+      const x = x0 + i * h;
+      const intIdx = idxMap[j * (GRID_N + 1) + i];
+      let nearInterior = intIdx >= 0;
+      if (!nearInterior) {
+        for (let dj = -1; dj <= 1 && !nearInterior; dj++) {
+          for (let di = -1; di <= 1 && !nearInterior; di++) {
+            const ni = i + di, nj = j + dj;
+            if (ni >= 0 && ni <= GRID_N && nj >= 0 && nj <= GRID_N) {
+              if (idxMap[nj * (GRID_N + 1) + ni] >= 0) nearInterior = true;
+            }
+          }
+        }
+      }
+      if (nearInterior) {
+        gridToVert[j * (GRID_N + 1) + i] = allVertsX.length;
+        allVertsX.push(x);
+        allVertsY.push(y);
+        allVertInteriorIdx.push(intIdx);
+      }
+    }
+  }
+
+  const triangles = [];
+  for (let j = 0; j < GRID_N; j++) {
+    for (let i = 0; i < GRID_N; i++) {
+      const v00 = gridToVert[j * (GRID_N + 1) + i];
+      const v10 = gridToVert[j * (GRID_N + 1) + (i + 1)];
+      const v01 = gridToVert[(j + 1) * (GRID_N + 1) + i];
+      const v11 = gridToVert[(j + 1) * (GRID_N + 1) + (i + 1)];
+      if (v00 >= 0 && v10 >= 0 && v11 >= 0 &&
+          (allVertInteriorIdx[v00] >= 0 || allVertInteriorIdx[v10] >= 0 || allVertInteriorIdx[v11] >= 0)) {
+        triangles.push([v00, v10, v11]);
+      }
+      if (v00 >= 0 && v11 >= 0 && v01 >= 0 &&
+          (allVertInteriorIdx[v00] >= 0 || allVertInteriorIdx[v11] >= 0 || allVertInteriorIdx[v01] >= 0)) {
+        triangles.push([v00, v11, v01]);
+      }
+    }
+  }
+
+  // Solve smallest NUM_MODES eigenpairs of L
+  const kModes = Math.min(NUM_MODES, m);
+  const eigVecs = [];
+  const eigVals = new Float64Array(kModes);
+
+  function applyA(src, dst) {
+    for (let u = 0; u < m; u++) {
+      let sum = 4.0 * src[u];
+      const row = nbrs[u];
+      for (let p = 0; p < row.length; p++) sum -= src[row[p]];
+      dst[u] = sum * invH2;
+    }
+  }
+
+  const lambdaMax = 8.0 * invH2;
+  const tmp = new Float64Array(m);
+
+  let seed = 1337;
+  function rand() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646 - 0.5;
+  }
+
+  for (let k = 0; k < kModes; k++) {
+    const v = new Float64Array(m);
+    for (let i = 0; i < m; i++) v[i] = rand();
+
+    const iters = 95;
+    for (let it = 0; it < iters; it++) {
+      applyA(v, tmp);
+      for (let i = 0; i < m; i++) v[i] = lambdaMax * v[i] - tmp[i];
+
+      for (let prev = 0; prev < k; prev++) {
+        const uVec = eigVecs[prev];
+        let dot = 0;
+        for (let i = 0; i < m; i++) dot += v[i] * uVec[i];
+        for (let i = 0; i < m; i++) v[i] -= dot * uVec[i];
+      }
+
+      let norm = 0;
+      for (let i = 0; i < m; i++) norm += v[i] * v[i];
+      norm = Math.sqrt(norm) || 1;
+      for (let i = 0; i < m; i++) v[i] /= norm;
+    }
+
+    applyA(v, tmp);
+    let rq = 0;
+    for (let i = 0; i < m; i++) rq += v[i] * tmp[i];
+    eigVals[k] = rq;
+    eigVecs.push(v);
+  }
+
+  return {
+    name: shapeDef.name,
+    yOffset: shapeDef.yOffset || 0,
+    poly,
+    span,
+    nodesX,
+    nodesY,
+    allVertsX,
+    allVertsY,
+    allVertInteriorIdx,
+    triangles,
+    eigVals,
+    eigVecs
+  };
+}
+
+// Shared Web Audio Context
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContextClass();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+// Synthesize a warm, smooth modal strike sound via Web Audio API
+function playModalStrike(eigVals, modalAmps) {
+  const ctx = ensureAudio();
+  const now = ctx.currentTime;
+
+  // Low-pass filter to roll off harsh metallic high frequencies
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(900, now);
+  // Gently darken the tone as the drum rings out
+  filter.frequency.exponentialRampToValueAtTime(280, now + 1.4);
+  filter.Q.setValueAtTime(0.7, now);
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.32, now);
+
+  filter.connect(master);
+  master.connect(ctx.destination);
+
+  for (let k = 0; k < eigVals.length; k++) {
+    const amp = Math.abs(modalAmps[k]);
+    if (amp < 0.005) continue;
+
+    const ratio = Math.sqrt(eigVals[k] / CIRCLE_LAMBDA1);
+    const freq = REF_CIRCLE_HZ * ratio;
+    if (freq > 8000) continue;
+
+    // Higher modes decay faster (Rayleigh damping)
+    const decayRate = BASE_DAMPING + RAYLEIGH_ALPHA * eigVals[k] * 1.4;
+    const timeConstant = 1.0 / decayRate;
+    const duration = Math.min(3.5, timeConstant * 6.5);
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+
+    // Stronger roll-off on higher modes for a rounder, less bright timbre
+    const initialGain = Math.min(0.4, amp / (1 + 0.35 * Math.pow(k, 1.15)));
+
+    // Smooth, click-free 18ms attack followed by true exponential decay
+    const attackTime = 0.018;
+    gain.gain.setValueAtTime(0.0, now);
+    gain.gain.linearRampToValueAtTime(initialGain, now + attackTime);
+    gain.gain.setTargetAtTime(0.0, now + attackTime, timeConstant);
+
+    osc.connect(gain);
+    gain.connect(filter);
+    osc.start(now);
+    osc.stop(now + duration + 0.05);
+  }
+}
+
+// Interactive Drum Controller
+class InteractiveDrum {
+  constructor(canvas, labelEl, shapeKey) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    const shapeDef = SHAPES[shapeKey] || SHAPES.circle;
+    labelEl.textContent = shapeDef.name;
+
+    this.model = buildAndSolveDrum(shapeDef);
+    this.activeAmps = new Float64Array(this.model.eigVals.length);
+    this.strikeTime = -1;
+    this.strikePos = null;
+    this.animating = false;
+
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(this.canvas);
+    this.resize();
+
+    this.canvas.addEventListener('pointerdown', (e) => this.onStrike(e));
+  }
+
+  resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    this.width = rect.width || 280;
+    this.height = rect.height || 280;
+    this.canvas.width = this.width * dpr;
+    this.canvas.height = this.height * dpr;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.render(0);
+  }
+
+  worldToScreen(wx, wy) {
+    const scale = (Math.min(this.width, this.height) * 0.84) / this.model.span;
+    const wyShifted = wy + this.model.yOffset;
+    return [
+      this.width * 0.5 + wx * scale,
+      this.height * 0.5 - wyShifted * scale
+    ];
+  }
+
+  screenToWorld(sx, sy) {
+    const scale = (Math.min(this.width, this.height) * 0.84) / this.model.span;
+    return [
+      (sx - this.width * 0.5) / scale,
+      -(sy - this.height * 0.5) / scale - this.model.yOffset
+    ];
+  }
+
+  onStrike(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const [wx, wy] = this.screenToWorld(sx, sy);
+
+    if (!pointInPoly(wx, wy, this.model.poly)) return;
+
+    // Project Gaussian mallet footprint onto eigenmodes
+    const { nodesX, nodesY, eigVecs } = this.model;
+    const m = nodesX.length;
+    const mallet = new Float64Array(m);
+    const inv2Sigma2 = 1.0 / (2 * MALLET_SIGMA * MALLET_SIGMA);
+
+    let malletNorm = 0;
+    for (let i = 0; i < m; i++) {
+      const dx = nodesX[i] - wx;
+      const dy = nodesY[i] - wy;
+      const w = Math.exp(-(dx * dx + dy * dy) * inv2Sigma2);
+      mallet[i] = w;
+      malletNorm += w * w;
+    }
+    malletNorm = Math.sqrt(malletNorm) || 1;
+
+    for (let k = 0; k < eigVecs.length; k++) {
+      const vec = eigVecs[k];
+      let proj = 0;
+      for (let i = 0; i < m; i++) proj += (mallet[i] / malletNorm) * vec[i];
+      this.activeAmps[k] = proj;
+    }
+
+    this.strikePos = [wx, wy];
+    this.strikeTime = performance.now();
+    playModalStrike(this.model.eigVals, this.activeAmps);
+
+    if (!this.animating) {
+      this.animating = true;
+      requestAnimationFrame((t) => this.loop(t));
+    }
+  }
+
+  loop(now) {
+    const dt = (now - this.strikeTime) * 0.001;
+    this.render(dt);
+    if (dt < 2.6) {
+      requestAnimationFrame((t) => this.loop(t));
+    } else {
+      this.animating = false;
+      this.render(0);
+    }
+  }
+
+  render(dt) {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.width, this.height);
+
+    const { poly, nodesX, allVertsX, allVertsY, allVertInteriorIdx, triangles, eigVals, eigVecs } = this.model;
+    const m = nodesX.length;
+    const disp = new Float64Array(m);
+
+    if (dt > 0) {
+      const visualOmegaScale = 28.0;
+      for (let k = 0; k < eigVals.length; k++) {
+        const amp = this.activeAmps[k];
+        if (Math.abs(amp) < 1e-4) continue;
+        const decay = Math.exp(-(BASE_DAMPING + RAYLEIGH_ALPHA * eigVals[k]) * dt);
+        const phase = Math.cos(Math.sqrt(eigVals[k]) * visualOmegaScale * dt) * decay * amp;
+        const vec = eigVecs[k];
+        for (let i = 0; i < m; i++) disp[i] += phase * vec[i];
+      }
+    }
+
+    // Clip to drum polygon outline
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < poly.length; i++) {
+      const [px, py] = this.worldToScreen(poly[i][0], poly[i][1]);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#f3f2ec';
+    ctx.fill();
+    ctx.clip();
+
+    // Render finite element triangles colored by instantaneous membrane displacement
+    const gainVisual = Math.sqrt(m) * 0.55;
+    for (let t = 0; t < triangles.length; t++) {
+      const [a, b, c] = triangles[t];
+      const ia = allVertInteriorIdx[a];
+      const ib = allVertInteriorIdx[b];
+      const ic = allVertInteriorIdx[c];
+      const uAvg = ((ia >= 0 ? disp[ia] : 0) + (ib >= 0 ? disp[ib] : 0) + (ic >= 0 ? disp[ic] : 0)) / 3.0;
+      const val = Math.max(-1, Math.min(1, uAvg * gainVisual));
+
+      let r = 243, g = 242, bl = 236;
+      if (val > 0) {
+        r = Math.round(243 - val * 35);
+        g = Math.round(242 - val * 145);
+        bl = Math.round(236 - val * 175);
+      } else if (val < 0) {
+        const nv = -val;
+        r = Math.round(243 - nv * 175);
+        g = Math.round(242 - nv * 110);
+        bl = Math.round(236 - nv * 25);
+      }
+
+      const [x1, y1] = this.worldToScreen(allVertsX[a], allVertsY[a]);
+      const [x2, y2] = this.worldToScreen(allVertsX[b], allVertsY[b]);
+      const [x3, y3] = this.worldToScreen(allVertsX[c], allVertsY[c]);
+
+      ctx.fillStyle = `rgb(${r},${g},${bl})`;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(x3, y3);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Strike ripple marker
+    if (dt > 0 && dt < 0.45 && this.strikePos) {
+      const [sx, sy] = this.worldToScreen(this.strikePos[0], this.strikePos[1]);
+      ctx.strokeStyle = `rgba(30, 30, 28, ${1 - dt / 0.45})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 4 + dt * 28, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Draw clamped drum rim
+    ctx.beginPath();
+    for (let i = 0; i < poly.length; i++) {
+      const [px, py] = this.worldToScreen(poly[i][0], poly[i][1]);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--rim').trim() || '#1f1f1d';
+    ctx.stroke();
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new InteractiveDrum(
+    document.getElementById('canvas-left'),
+    document.getElementById('label-left'),
+    LEFT_SHAPE
+  );
+  new InteractiveDrum(
+    document.getElementById('canvas-right'),
+    document.getElementById('label-right'),
+    RIGHT_SHAPE
+  );
+});
+</script>
+</body>
+</html>
