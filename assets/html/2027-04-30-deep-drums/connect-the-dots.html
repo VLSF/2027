@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Side-by-Side Connect the Dots</title>
+<style>
+  :root {
+    --bg: #fcfcfa;
+    --card-bg: #ffffff;
+    --border: #e5e4de;
+    --text: #222220;
+    --muted: #6e6d68;
+    --rim: #1f1f1d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615;
+      --card-bg: #1e1e1c;
+      --border: #333330;
+      --text: #ededeb;
+      --muted: #9a9992;
+      --rim: #e6e5e0;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .drums-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 780px;
+  }
+  @media (max-width: 520px) {
+    .drums-grid { grid-template-columns: 1fr; }
+  }
+  .drum-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .svg-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .star-fill {
+    fill: var(--bg);
+    stroke: none;
+  }
+  .edge {
+    stroke: var(--rim);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+  .dot {
+    fill: var(--rim);
+  }
+  .label {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .hint {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--muted);
+    text-align: center;
+  }
+  .hint a {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Shared SVG Definitions (Mask & Star Geometry) -->
+<svg width="0" height="0" style="position: absolute;">
+  <defs>
+    <mask id="dot-halo">
+      <rect width="260" height="260" fill="white" />
+      <g fill="black">
+        <circle cx="130" cy="30" r="8" />
+        <circle cx="153" cy="98" r="8" />
+        <circle cx="225" cy="99" r="8" />
+        <circle cx="168" cy="142" r="8" />
+        <circle cx="189" cy="211" r="8" />
+        <circle cx="130" cy="170" r="8" />
+        <circle cx="71" cy="211" r="8" />
+        <circle cx="92" cy="142" r="8" />
+        <circle cx="35" cy="99" r="8" />
+        <circle cx="107" cy="98" r="8" />
+      </g>
+    </mask>
+
+    <g id="star-geometry">
+      <!-- 1. Star Fill -->
+      <polygon class="star-fill" mask="url(#dot-halo)" points="
+        130,30 153,98 225,99 168,142 189,211 130,170 71,211 92,142 35,99 107,98
+      " />
+
+      <!-- 2. Shortened Edges -->
+      <g class="edge">
+        <line x1="132.6" y1="37.6"  x2="150.4" y2="90.4" />
+        <line x1="161.0" y1="98.1"  x2="217.0" y2="98.9" />
+        <line x1="218.6" y1="104.8" x2="174.4" y2="136.2" />
+        <line x1="170.3" y1="149.7" x2="186.7" y2="203.3" />
+        <line x1="182.4" y1="206.4" x2="136.6" y2="174.6" />
+        <line x1="123.4" y1="174.6" x2="77.6"  y2="206.4" />
+        <line x1="73.3"  y1="203.3" x2="89.7"  y2="149.7" />
+        <line x1="85.6"  y1="136.2" x2="41.4"  y2="104.8" />
+        <line x1="43.0"  y1="98.9"  x2="99.0"  y2="98.1" />
+        <line x1="109.6" y1="90.4"  x2="127.4" y2="37.6" />
+      </g>
+
+      <!-- 3. Dots -->
+      <g class="dot">
+        <circle cx="130" cy="30" r="4" />
+        <circle cx="153" cy="98" r="4" />
+        <circle cx="225" cy="99" r="4" />
+        <circle cx="168" cy="142" r="4" />
+        <circle cx="189" cy="211" r="4" />
+        <circle cx="130" cy="170" r="4" />
+        <circle cx="71" cy="211" r="4" />
+        <circle cx="92" cy="142" r="4" />
+        <circle cx="35" cy="99" r="4" />
+        <circle cx="107" cy="98" r="4" />
+      </g>
+    </g>
+  </defs>
+</svg>
+
+<div class="drums-grid">
+  <!-- First Star (Clockwise starting at top) -->
+  <div class="drum-card">
+    <div class="svg-wrap">
+      <svg viewBox="0 0 260 260" aria-label="First star">
+        <use href="#star-geometry" />
+        <g class="label">
+          <text x="130" y="13">1</text>
+          <text x="163" y="83">2</text>
+          <text x="242" y="95">3</text>
+          <text x="185" y="146">4</text>
+          <text x="201" y="225">5</text>
+          <text x="130" y="189">6</text>
+          <text x="59" y="225">7</text>
+          <text x="75" y="146">8</text>
+          <text x="18" y="95">9</text>
+          <text x="97" y="83">10</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Second Star (Counterclockwise starting at old position 4) -->
+  <div class="drum-card">
+    <div class="svg-wrap">
+      <svg viewBox="0 0 260 260" aria-label="Second star">
+        <use href="#star-geometry" />
+        <g class="label">
+          <text x="130" y="13">4</text>
+          <text x="163" y="83">3</text>
+          <text x="242" y="95">2</text>
+          <text x="185" y="146">1</text>
+          <text x="201" y="225">10</text>
+          <text x="130" y="189">9</text>
+          <text x="59" y="225">8</text>
+          <text x="75" y="146">7</text>
+          <text x="18" y="95">6</text>
+          <text x="97" y="83">5</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div class="hint">
+  Connect-the-dots boundary parametrisation. Example of two equivalent drums.
+</div>
+
+</body>
+</html>

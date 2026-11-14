@@ -105,12 +105,12 @@ Can we *actually* hear how the drum will sound if we compute the spectrum $\lamb
     height="400"
     style="border: none; overflow: hidden; border-radius: 8px;"
     loading="lazy"
-    title="Interactive side-by-side drum comparison">
+    title="Circle and triangle">
   </iframe>
 </d-figure>
 Of course, in the real world, the actual sound will depend on many other messy details, like the material and the tension of the drum's membrane, where and how one hits it, and the state of the ambient air. We will ignore all that, as mathematicians do, and strictly focus on the reconstruction of the boundary shape $\partial\Gamma$ from the spectrum $\lambda_1 \leq \lambda_2 \leq \dots$. This is our inverse problem.
 
-While the inverse problem is notoriously difficult, the forward problem is fairly straightforward. We need it for certain methods (like Markov Chain Monte Carlo), for dataset collection, and for evaluation. We won't need the specifics of how the forward problem is solved in the rest of the blog post, so this part is optional.
+While the inverse problem is notoriously difficult, the forward problem is fairly straightforward. We need it for certain methods (like Markov Chain Monte Carlo), for dataset collection, and for evaluation. We won't use the specifics of how the forward problem is solved in the rest of the blog post, so this part is optional.
 
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Solution of the forward problem: computing the spectrum of the drum from its boundary</summary>
@@ -119,7 +119,7 @@ Finite element discretization, eigensolvers and all that.
 
 </details>
 
-So, can one hear the shape of a drum? The circular and triangular drums above surely sound different. However, in full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Yes, we know that they sound different! Yet the spectrum is the same.</d-footnote>
+So, can one hear the shape of a drum? The circular and triangular drums above surely sound different. However, in full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Why, yes, we know that they sound different!</d-footnote>
 
 <d-figure>
   <iframe
@@ -128,7 +128,7 @@ So, can one hear the shape of a drum? The circular and triangular drums above su
     height="400"
     style="border: none; overflow: hidden; border-radius: 8px;"
     loading="lazy"
-    title="Interactive side-by-side drum comparison">
+    title="Two GWW drums">
   </iframe>
 </d-figure>
 
@@ -136,6 +136,27 @@ Evidently, some drums are impossible to distinguish by their spectra alone. Now 
 
 ## Parametrizations, symmetries and architectures
 
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/connect-the-dots.html' | relative_url }}"
+      width="100%"
+      height="370"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="connect-the-dots parametrisation">
+  </iframe>
+</d-figure>
+
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/connect-the-dots-moons.html' | relative_url }}"
+      width="100%"
+      height="370"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="connect-the-dots parametrisation">
+  </iframe>
+</d-figure>
 
 ## Warm-up: hearing triangular drums
 
