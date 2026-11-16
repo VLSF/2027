@@ -134,7 +134,7 @@ So, can one hear the shape of a drum? In full accordance with [the law of headli
   </iframe>
 </d-figure>
 
-So, perfect reconstruction is mathematically impossible. Now what? Should we abandon all hope? Can we still solve the inverse problem somehow? Before addressing this subtle issue, we will need to discuss a few technicalities. In particular, we should settle what we mean when we say that two drums have different shapes.
+Perfect reconstruction is mathematically impossible. Now what? Should we abandon all hope? Can we still solve the inverse problem somehow? Before addressing this subtle issue, we will need to discuss a few technicalities. In particular, we should settle what we mean when we say that two drums have different shapes.
 
 ## Parametrizations, symmetries and architectures
 
