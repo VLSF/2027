@@ -67,6 +67,8 @@ toc:
 
   .question-box p:last-child {
       margin-bottom: 0 !important;
+  }
+
 </style>
 
 ## Introduction
@@ -87,10 +89,10 @@ $$
 \frac{\partial^2 F(x, y, t)}{\partial t^2} = c^2 \left(\frac{\partial^2 F(x, y, t)}{\partial x^2}+\frac{\partial^2 F(x, y, t)}{\partial y^2}\right), (x, y) \in \Gamma, \left.F(x, y, t)\right|_{(x, y) \in \partial\Gamma} = 0,
 $$
 
-where $c$ is the wave speed, depending on the material and the tension of the drum. A particularly convenient way to analyze all possible motions is to study *pure tones*, given by solutions of the form $F(x, y, t) = \phi_{\omega}(x, y) e^{i\omega t}$. For pure tones, the equation reduces to an eigenproblem:
+where $c$ is the wave speed, depending on the material and the tension of the drum. This physical motion creates the drum's sound. A particularly convenient way to analyze all possible vibrations is to study *pure tones*, given by solutions of the form $F(x, y, t) = \phi_{\omega}(x, y) e^{i\omega t}$. For pure tones, the equation reduces to an eigenproblem:
 
 $$
--\frac{\partial^2 \phi_i(x, y)}{\partial x^2} -\frac{\partial^2 \phi_i(x, y)}{\partial y^2} = \lambda_i \phi_i(x, y), (x, y) \in \Gamma, \left.\phi_i(x, y)\right|_{(x,y)\in\partial\Gamma} = 0.
+-\frac{\partial^2 \phi_i(x, y)}{\partial x^2} -\frac{\partial^2 \phi_i(x, y)}{\partial y^2} = \lambda_i \phi_i(x, y),(x, y) \in \Gamma, \left.\phi_i(x, y)\right|_{(x,y)\in\partial\Gamma} = 0.
 $$
 
 "Can one hear the shape of a drum?" is a poetic summary of a formal mathematical question:
@@ -102,7 +104,7 @@ Can we *actually* hear how the drum will sound if we compute the spectrum $\lamb
   <iframe
     src="{{ 'assets/html/2027-04-30-deep-drums/side-by-side-drums.html' | relative_url }}"
     width="100%"
-    height="400"
+    height="410"
     style="border: none; overflow: hidden; border-radius: 8px;"
     loading="lazy"
     title="Circle and triangle">
@@ -119,22 +121,24 @@ Finite element discretization, eigensolvers and all that.
 
 </details>
 
-So, can one hear the shape of a drum? The circular and triangular drums above surely sound different. However, in full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Why, yes, we know that they sound different!</d-footnote>
+So, can one hear the shape of a drum? In full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Why, yes, we know that they sound different!</d-footnote>
 
 <d-figure>
   <iframe
     src="{{ 'assets/html/2027-04-30-deep-drums/side-by-side-drums_gww.html' | relative_url }}"
     width="100%"
-    height="400"
+    height="410"
     style="border: none; overflow: hidden; border-radius: 8px;"
     loading="lazy"
     title="Two GWW drums">
   </iframe>
 </d-figure>
 
-Evidently, some drums are impossible to distinguish by their spectra alone. Now what? Should we abandon all hope? Or can we still solve the inverse problem somehow? Before addressing this subtle issue, we will need to discuss a few technicalities. In particular, we should settle what we mean when we say that two drums have different shapes.
+So, perfect reconstruction is mathematically impossible. Now what? Should we abandon all hope? Can we still solve the inverse problem somehow? Before addressing this subtle issue, we will need to discuss a few technicalities. In particular, we should settle what we mean when we say that two drums have different shapes.
 
 ## Parametrizations, symmetries and architectures
+
+To keep things simple, we define a drum's shape as a polygon, a list of points $\left(\boldsymbol{r}_1,\dots,\boldsymbol{r}_N\right)$ where neighboring points, as well as the first and the last ones, are joined by an edge. Think of it exactly like a game of connect-the-dots.
 
 <d-figure>
   <iframe
@@ -147,6 +151,8 @@ Evidently, some drums are impossible to distinguish by their spectra alone. Now 
   </iframe>
 </d-figure>
 
+The parametrization is non-unique: one can apply a cyclic permutation to the points $\left(\boldsymbol{r}_1,\dots,\boldsymbol{r}_N\right)$ or reverse their order and get the same drum. For a drum with $N$ points, this gives $2N$ equivalent representations. Besides that, the spectrum computed from the Laplace eigenproblem does not change if the drum is shifted, rotated, or reflected.<d-footnote>The cyclic permutations and order reversals form <a href="https://en.wikipedia.org/wiki/Dihedral_group">the dihedral group $D_{N}$</a>, while the shifts, rotations, and reflections form <a href="https://en.wikipedia.org/wiki/Euclidean_group">the Euclidean group $E(2)$</a>.</d-footnote>
+
 <d-figure>
   <iframe
     src="{{ 'assets/html/2027-04-30-deep-drums/connect-the-dots-moons.html' | relative_url }}"
@@ -158,7 +164,39 @@ Evidently, some drums are impossible to distinguish by their spectra alone. Now 
   </iframe>
 </d-figure>
 
+Symmetries complicate the evaluations and design of the architectures. We omit the details in the main text where appropriate and simply write $\left\\|\text{drum}_1 - \text{drum}_2\right\\|$ for the distance between drums, $\mathcal{N}_2: \text{drum}\rightarrow \text{spectrum}$ for the architectures, and so on. The actual operations are slightly more involved, but you won't need them to understand the inverse problem.
+
+That being said, the actual implementation requires welding the symmetries into the metrics and architectures. So, for the readers interested in the nuts and bolts, we included a few technical drop-downs on geometric deep learning.
+
+<details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
+<summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Symmetry groups, invariant and equivariant maps, the distance between drums</summary>
+
+General explanation of the $D_N$ and $E(N)$. Definition of equivariant and invariant maps. Definition of invariant distance between the drums.
+
+</details>
+
+<details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
+<summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Ring transformers: invariant and equivariant architectures</summary>
+
+A description of a particular architecture (with both invariant and equivariant branches) that we use.
+
+</details>
+
 ## Warm-up: hearing triangular drums
+
+<details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
+<summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Transformer for the regression problem</summary>
+
+That is what we use for regression.
+
+</details>
+
+<details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
+<summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Solution by optimization</summary>
+
+Details on how the problem is solved by the optimization.
+
+</details>
 
 
 ## Isospectral drums of Buser, Conway, Doyle, Semmler
