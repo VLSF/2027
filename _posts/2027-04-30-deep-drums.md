@@ -33,7 +33,7 @@ toc:
   - name: Can one hear the shape of a drum?
   - name: Parametrizations, symmetries and architectures
   - name: "Warm-up: hearing triangular drums"
-  - name: Isospectral drums of Buser, Conway, Doyle, Semmler
+  - name: Isospectral drums of Buser, Conway, Doyle, and Semmler
   - name: Closing remarks
 
 ---
@@ -153,6 +153,8 @@ To keep things simple, we define a drum's shape as a polygon, a list of points $
 
 The parametrization is non-unique: one can apply a cyclic permutation to the points $\left(\boldsymbol{r}_1,\dots,\boldsymbol{r}_N\right)$ or reverse their order and get the same drum. For a drum with $N$ points, this gives $2N$ equivalent representations. Besides that, the spectrum computed from the Laplace eigenproblem does not change if the drum is shifted, rotated, or reflected.<d-footnote>The cyclic permutations and order reversals form <a href="https://en.wikipedia.org/wiki/Dihedral_group">the dihedral group $D_{N}$</a>, while the shifts, rotations, and reflections form <a href="https://en.wikipedia.org/wiki/Euclidean_group">the Euclidean group $E(2)$</a>.</d-footnote>
 
+Putting these together, we consider two drums to have the same shape if they differ only by these symmetries. By that logic, the two mirrored moons below are actually the exact same drum.
+
 <d-figure>
   <iframe
     src="{{ 'assets/html/2027-04-30-deep-drums/connect-the-dots-moons.html' | relative_url }}"
@@ -184,12 +186,36 @@ A description of a particular architecture (with both invariant and equivariant 
 
 ## Warm-up: hearing triangular drums
 
+
+
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/triangles-dataset.html' | relative_url }}"
+      width="100%"
+      height="390"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="dataset with triangular drums">
+  </iframe>
+</d-figure>
+
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Transformer for the regression problem</summary>
 
 That is what we use for regression.
 
 </details>
+
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/drum_optimization_animation_semilog_1.html' | relative_url }}"
+      width="100%"
+      height="685"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="triangle drum optimization example">
+  </iframe>
+</d-figure>
 
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Solution by optimization</summary>
@@ -199,7 +225,18 @@ Details on how the problem is solved by the optimization.
 </details>
 
 
-## Isospectral drums of Buser, Conway, Doyle, Semmler
+## Isospectral drums of Buser, Conway, Doyle, and Semmler
+
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/BCDS-dataset.html' | relative_url }}"
+      width="100%"
+      height="390"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="dataset with BCDS drums">
+  </iframe>
+</d-figure>
 
 
 ## Closing remarks
