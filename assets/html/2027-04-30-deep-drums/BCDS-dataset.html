@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Isospectral Polygonal Drums &amp; Shared Spectra (Configurable Transforms)</title>
+<style>
+  :root {
+    --bg: #fcfcfa;
+    --card-bg: #ffffff;
+    --border: #e5e4de;
+    --text: #222220;
+    --muted: #6e6d68;
+    --drum1: #1f1f1d;
+    --drum2: #dc2626;
+    --spectrum: #1f1f1d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615;
+      --card-bg: #1e1e1c;
+      --border: #333330;
+      --text: #ededeb;
+      --muted: #9a9992;
+      --drum1: #e6e5e0;
+      --drum2: #f87171;
+      --spectrum: #e6e5e0;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .drums-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 780px;
+    cursor: pointer;
+  }
+  @media (max-width: 600px) {
+    .drums-grid { grid-template-columns: 1fr; }
+  }
+  .drum-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: border-color 0.15s ease;
+  }
+  .drums-grid:hover .drum-card {
+    border-color: var(--muted);
+  }
+  .panel-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    max-width: 310px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .spectrum-wrap {
+    width: 100%;
+    aspect-ratio: 1.15 / 1;
+    max-width: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+  }
+  .edge {
+    stroke-width: 2.3;
+    stroke-linecap: round;
+  }
+  .axis-line {
+    stroke: var(--text);
+    stroke-width: 1.15;
+    stroke-linecap: square;
+  }
+  .tick-mark {
+    stroke: var(--text);
+    stroke-width: 1.1;
+  }
+  .tick-label {
+    font-size: 10.5px;
+    fill: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--text);
+  }
+  .hint {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="drums-grid" id="interactive-grid" title="Click to switch polygon pair">
+  <!-- Left Panel: Two Isospectral Polygons -->
+  <div class="drum-card">
+    <div class="panel-wrap">
+      <svg id="drums-svg" viewBox="0 0 280 280" aria-label="Two isospectral polygonal drums"></svg>
+    </div>
+  </div>
+
+  <!-- Right Panel: Tufte-Style Eigenvalue Index vs. Shared log(lambda_k) -->
+  <div class="drum-card">
+    <div class="spectrum-wrap">
+      <svg id="spectrum-svg" viewBox="0 0 340 280" aria-label="Shared log eigenvalue spectrum"></svg>
+    </div>
+  </div>
+</div>
+
+<div class="hint" id="hint-text">
+  Two isospectral drums and their shared spectrum log(λ<sub>k</sub>), k = 1, …, 30. Click to toggle between pairs (1 / 10).
+</div>
+
+<script>
+  // For each pair, adjust `rotDeg` (clockwise rotation in degrees) and `shift: [dx, dy]`
+  // (translation in polygon coordinate units applied after rotation) for both drum1 and drum2.
+  const PAIRS = [
+    // Pair 1
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [-0.0, 0.0],
+        vertices: [
+          [ 3.18217718, -0.75429420],
+          [ 1.55083807,  1.60493643],
+          [-0.79083177,  1.29451484],
+          [-1.41928557,  2.99352246],
+          [-3.06091369,  0.64143963],
+          [-1.95283594, -1.44469144],
+          [-0.42036538, -0.47871264],
+          [ 1.37066803, -0.75033806],
+          [ 1.54054906, -3.10637702]
+        ]
+      },
+      drum2: {
+        rotDeg: 20,
+        shift: [+0.0, 0.0],
+        vertices: [
+          [ 3.60194558, -0.41026692],
+          [ 1.45708039,  1.49414632],
+          [-0.74391497,  0.63659249],
+          [-1.75781116,  2.13779053],
+          [-3.51845381,  1.71150598],
+          [-2.79400950, -0.53681775],
+          [ 0.03699465, -0.99795981],
+          [ 1.87686589, -3.19843937],
+          [ 1.84130294, -0.83655147]
+        ]
+      },
+      spectrum: [
+         2.46704864,  3.25737000,  4.98591639,  6.28805193,  6.77374787,  8.51927466,
+         9.88452182, 10.68912121, 11.60165843, 12.48983641, 13.70354155, 15.16714377,
+        16.17950935, 16.53937599, 17.94840528, 19.16774936, 20.64393649, 20.94168828,
+        21.54746698, 23.08610784, 23.26524864, 25.22872104, 25.84350781, 27.31337749,
+        28.21446053, 29.58649527, 30.02773881, 30.75175564, 32.18637899, 33.21611384
+      ]
+    },
+    // Pair 2
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [ 1.22325245, -2.37693833],
+          [ 0.79094290, -0.72300323],
+          [ 1.96821753, -1.77832468],
+          [ 1.45979870,  0.85021791],
+          [-0.73402212,  2.38477846],
+          [-2.05259463,  1.51239928],
+          [-1.62028508, -0.14153582],
+          [-0.24944554,  0.87983180],
+          [-0.78586421, -0.60742538]
+        ]
+      },
+      drum2: {
+        rotDeg: 15,
+        shift: [-0.3, +0.1],
+        vertices: [
+          [ 1.40744155, -2.46278283],
+          [ 1.76960550,  0.18986926],
+          [ 0.65254161, -0.92899049],
+          [ 0.99265219,  0.74633563],
+          [ 0.07150597,  2.18643372],
+          [-1.46412972,  1.81026631],
+          [-1.82629367, -0.84238578],
+          [-0.68787129,  0.43291314],
+          [-0.91545214, -1.13165896]
+        ]
+      },
+      spectrum: [
+         4.14547404,  6.16658705,  8.77343610, 10.51991705, 12.46629535, 15.30966894,
+        16.54980442, 19.05586423, 19.94043731, 21.99008851, 23.78541825, 24.42358538,
+        27.62616201, 29.01820313, 30.93683540, 32.89530563, 35.79167566, 37.32249142,
+        37.77060971, 40.10095831, 40.57136677, 41.85639703, 43.50386128, 46.70786891,
+        48.11849833, 48.65496522, 51.84196758, 54.39657571, 54.67145895, 56.02590630
+      ]
+    },
+    // Pair 3
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [ 0.00344952, -1.25603006],
+          [ 0.55825620, -0.11571409],
+          [ 0.83578254, -1.08095693],
+          [ 1.63314668,  0.55714654],
+          [ 0.55716477,  1.22826047],
+          [-0.18871236,  0.55566703],
+          [-0.77822195, -0.25747076],
+          [-0.91175063,  1.00360063],
+          [-1.70911477, -0.63450283]
+        ]
+      },
+      drum2: {
+        rotDeg: 15,
+        shift: [0.1, 0.1],
+        vertices: [
+          [ 0.22317270, -0.92275805],
+          [ 0.47696448,  0.31970752],
+          [ 0.98581766, -0.54619262],
+          [ 1.79370091,  0.05049765],
+          [ 1.35075198,  1.23874308],
+          [-0.41350222,  0.78423275],
+          [-2.04447733, -0.02761251],
+          [-0.78227246, -0.14996377],
+          [-1.59015571, -0.74665404]
+        ]
+      },
+      spectrum: [
+         8.98055152,  12.06209109,  18.45906870,  22.78798163,  25.78597139,
+        30.83949082,  35.01438413,  38.99472058,  41.32832998,  45.42054948,
+        49.68532850,  51.98837737,  58.65412493,  60.23483678,  66.50828987,
+        66.56758694,  74.03700787,  76.37387897,  79.27311420,  81.31171876,
+        83.28067695,  90.36921262,  92.30566256,  93.88758583, 100.90289778,
+       104.05634413, 109.25156188, 111.76830609, 115.70142326, 117.17653585
+      ]
+    },
+    // Pair 4
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [-0.62981402, -1.16880548],
+          [ 0.64185973, -0.53416035],
+          [ 1.05120271,  0.82685651],
+          [ 0.24120093,  1.12890530],
+          [-0.34492732,  0.56086872],
+          [ 0.40900302,  0.24813731],
+          [-0.44514086,  0.38145872],
+          [-0.75475622, -1.00564866],
+          [-0.16862797, -0.43761208]
+        ]
+      },
+      drum2: {
+        rotDeg: 15,
+        shift: [0.0, 0.2],
+        vertices: [
+          [-0.33033016, -0.44640937],
+          [ 0.48069431, -0.35447907],
+          [ 0.96956521,  0.29913942],
+          [ 0.56694231,  1.06414345],
+          [-0.73095419,  0.48501200],
+          [ 0.07460752,  0.35355017],
+          [-0.78734397,  0.28739901],
+          [-0.77053877, -1.13374354],
+          [ 0.52735773, -0.55461209]
+        ]
+      },
+      spectrum: [
+        17.47046458,  24.84555398,  35.89241693,  44.59148536,  51.40752900,
+        62.66748026,  68.25840182,  76.23852723,  80.48331759,  93.63898961,
+        94.53076617, 101.59421139, 112.60395603, 116.17462121, 126.71562236,
+       134.65598201, 145.26577233, 150.51319082, 156.51026070, 162.62052187,
+       165.01311420, 167.78878750, 178.78085804, 184.58095395, 197.58800091,
+       202.52676880, 208.42676030, 220.11380865, 227.38980572, 230.29042163
+      ]
+    },
+    // Pair 5
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [-0.35841192,  2.21630376],
+          [-2.10275614,  0.97642060],
+          [-1.06356992, -0.67426753],
+          [-0.19146385,  0.01360764],
+          [ 0.63733141, -0.72587844],
+          [-0.14119304, -2.51433559],
+          [ 1.60315118, -1.27445243],
+          [ 1.77468820,  0.85876628],
+          [-0.15777591,  1.12383571]
+        ]
+      },
+      drum2: {
+        rotDeg: 20,
+        shift: [0.1, -0.1],
+        vertices: [
+          [-0.74979968,  1.63553856],
+          [-1.83151423,  1.88779810],
+          [-2.07107392, -0.04799385],
+          [ 0.03475902, -0.42945769],
+          [ 0.02456433, -2.56953784],
+          [ 1.03919400, -0.90364290],
+          [ 2.12090855, -1.15590244],
+          [ 1.68064457,  0.93842673],
+          [-0.24768264,  0.64477132]
+        ]
+      },
+      spectrum: [
+         5.14263137,  6.28487166, 10.61986958, 13.07648165, 13.87996371, 16.59832411,
+        18.70165953, 21.15532023, 24.30791116, 26.08797023, 28.32184381, 30.81216540,
+        31.06895137, 33.91178913, 34.91439860, 37.37566573, 40.26271389, 42.88788699,
+        46.01799959, 46.20187292, 48.11330162, 50.69980995, 51.27270192, 52.89444541,
+        54.71508023, 57.87011088, 60.83232515, 61.91682135, 64.41894619, 66.68764735
+      ]
+    },
+    // Pair 6
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [ 0.09043042,  1.74628067],
+          [-1.07325250,  1.03975104],
+          [-0.52804008, -0.32284148],
+          [ 0.04137321,  0.25811712],
+          [-0.05615276, -0.54949236],
+          [-0.68991955, -1.87321990],
+          [ 0.47376338, -1.16669028],
+          [ 1.34822496, -0.12330204],
+          [ 0.39357293,  0.99139723]
+        ]
+      },
+      drum2: {
+        rotDeg: 5,
+        shift: [-0.2, 0.0],
+        vertices: [
+          [-1.03033291e-01,  1.77444663e+00],
+          [-3.79246151e-01,  1.00929904e+00],
+          [-1.29381430e+00, -1.38516294e-01],
+          [-1.29326669e-03,  2.88954684e-01],
+          [-7.65717608e-01, -8.37543207e-01],
+          [ 2.96802210e-01, -1.84994955e+00],
+          [ 5.73015070e-01, -1.08480196e+00],
+          [ 5.88341347e-01, -2.71469622e-01],
+          [ 1.08494599e+00,  1.10958026e+00]
+        ]
+      },
+      spectrum: [
+        10.19065415,  12.19768259,  20.53012887,  25.61800917,  26.57006864,
+        33.30229101,  36.63734019,  41.49500469,  46.78742133,  52.40563020,
+        54.52404807,  59.08069670,  63.33410957,  65.29599543,  68.98349305,
+        73.97481335,  78.22202281,  83.50232421,  89.91176812,  90.43916270,
+        94.36410230,  96.53463052, 103.80107759, 104.49891478, 109.93733662,
+       113.78629682, 116.42704808, 123.58642997, 126.70348359, 128.66760371
+      ]
+    },
+    // Pair 7
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [-1.77197417,  0.11705341],
+          [-2.35999947, -1.22246007],
+          [-1.12547699, -1.58380168],
+          [-0.44265889, -0.49367648],
+          [ 0.99844065, -0.74527588],
+          [ 2.46000809,  0.33855402],
+          [ 1.22548561,  0.69989563],
+          [ 1.07654131,  2.15519138],
+          [-0.06036613,  0.73451966]
+        ]
+      },
+      drum2: {
+        rotDeg: 5,
+        shift: [0.0, -0.05],
+        vertices: [
+          [-1.14328702,  0.59912221],
+          [-2.00657701, -1.00262592],
+          [-0.69923253, -2.26821553],
+          [-0.73541244, -0.80576514],
+          [ 0.44354176, -0.29129404],
+          [ 1.71759421, -0.46850545],
+          [ 1.73119059,  0.99432922],
+          [ 0.42384611,  2.25991883],
+          [ 0.26833633,  0.98303582]
+        ]
+      },
+      spectrum: [
+         5.50517611,  7.56194006, 10.99636282, 14.14417676, 15.16806666, 19.48161475,
+        23.20802769, 24.50513920, 25.82118113, 28.21755510, 30.78659976, 34.13154953,
+        36.73955709, 37.69770053, 40.06018460, 44.60679170, 46.10949237, 47.54098778,
+        50.42315582, 52.21996491, 53.50860560, 56.35252402, 59.39339604, 61.46079437,
+        64.33553701, 67.02258179, 69.21170455, 69.59648982, 72.16728671, 73.77080283
+      ]
+    },
+    // Pair 8
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [ 0.80025221, -0.70537503],
+          [ 0.78895024,  0.51787352],
+          [ 0.77542177,  1.20021342],
+          [-0.28028545,  1.11217966],
+          [-0.42369866, -0.10268552],
+          [ 0.20231517,  0.16911852],
+          [-0.33553003, -0.25099253],
+          [-1.29156624, -1.01418289],
+          [-0.23585902, -0.92614914]
+        ]
+      },
+      drum2: {
+        rotDeg: 10,
+        shift: [0.1, 0.1],
+        vertices: [
+          [ 0.34086383, -0.47457548],
+          [ 1.23710700,  0.35801863],
+          [ 0.68528684,  1.26232067],
+          [ 0.12639530,  0.87064351],
+          [-0.86790279,  0.15801733],
+          [ 0.19094784,  0.19122926],
+          [-0.82573683, -0.10646181],
+          [-0.72292636, -1.32543464],
+          [-0.16403482, -0.93375748]
+        ]
+      },
+      spectrum: [
+        15.57298934,  18.49414074,  30.92323684,  38.37194392,  40.61584914,
+        50.96584495,  55.88328649,  63.21055839,  70.99777238,  78.89111841,
+        80.96859205,  88.69711094,  97.50860032,  98.56451431, 107.37757075,
+       113.24402190, 116.48037275, 126.94552857, 132.86480565, 137.32490344,
+       142.85211518, 147.51572363, 156.22722070, 160.47097303, 166.46962207,
+       171.14038692, 180.68336776, 186.93980352, 193.00079964, 195.51369396
+      ]
+    },
+    // Pair 9
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [ 1.23430079,  2.43905635],
+          [-0.66013573,  3.74171545],
+          [-1.45846271,  1.97904220],
+          [-2.03502896, -0.69119368],
+          [-0.12024170,  0.58136288],
+          [-0.74636631, -1.63082572],
+          [ 0.68396195, -3.95821683],
+          [ 1.48228893, -2.19554358],
+          [ 1.61968374, -0.26539706]
+        ]
+      },
+      drum2: {
+        rotDeg: 30,
+        shift: [0.0, -0.2],
+        vertices: [
+          [ 0.76888403,  2.30065917],
+          [-0.52292674,  3.74134230],
+          [-1.93747941,  1.92892647],
+          [-1.49105747, -0.76612376],
+          [-0.08664394,  0.56502821],
+          [-0.28706832, -1.35959462],
+          [ 0.00969089, -4.07520178],
+          [ 1.42424357, -2.26278594],
+          [ 2.12235739, -0.07225005]
+        ]
+      },
+      spectrum: [
+         2.45963392,  3.05490560,  4.71235081,  6.16153801,  6.34663561,  8.23717335,
+         9.88701499, 10.47490812, 10.93325292, 12.39033018, 13.04290603, 13.87364833,
+        15.95697942, 16.02113192, 17.25786540, 18.80158461, 19.87877740, 20.13593567,
+        21.15536828, 22.35403516, 22.82614536, 23.80216565, 25.37444494, 26.75149328,
+        27.22474713, 28.30220023, 29.26183006, 29.76459174, 30.99344835, 31.70484410
+      ]
+    },
+    // Pair 10
+    {
+      drum1: {
+        rotDeg: 0,
+        shift: [0.0, 0.0],
+        vertices: [
+          [-0.75628426,  0.62679878],
+          [-0.21119109,  0.09198292],
+          [-0.01640091, -0.27745066],
+          [-0.43350344, -0.84604187],
+          [ 0.27938959, -0.57229362],
+          [ 0.69635414, -0.54852502],
+          [ 0.55084907,  0.14147408],
+          [-0.06582186,  0.48350836],
+          [-0.04339124,  0.90054703]
+        ]
+      },
+      drum2: {
+        rotDeg: 20,
+        shift: [-0.05, -0.1],
+        vertices: [
+          [-0.72676815,  0.51034159],
+          [-0.09485801,  0.19735588],
+          [-0.09786983, -0.22027472],
+          [-0.33584158, -0.94589447],
+          [ 0.21131241, -0.50104282],
+          [ 0.58997231, -0.67722756],
+          [ 0.60152111,  0.08633069],
+          [ 0.03214591,  0.59521815],
+          [-0.17961416,  0.95519324]
+        ]
+      },
+      spectrum: [
+        32.94789974,  57.28179488,  68.96397941,  90.81111552, 102.51886063,
+       131.07191552, 133.92793019, 169.55181496, 176.40478523, 178.21899051,
+       205.91651397, 220.27158088, 226.37713347, 259.39894391, 265.26855108,
+       276.60027722, 297.14568910, 324.11354622, 330.83224798, 339.51714160,
+       343.22423185, 357.59041509, 374.53386963, 396.02015205, 414.16766914,
+       432.93528476, 451.38643061, 460.09398436, 477.37275467, 485.98531884
+      ]
+    }
+  ];
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs = {}, parent = null) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  // Rotate by `rotDeg` degrees clockwise around origin, then translate by `shift: [dx, dy]`
+  function transformPolygon({ vertices, rotDeg = 0, shift = [0, 0] }) {
+    const theta = -rotDeg * Math.PI / 180;
+    const cosT = Math.cos(theta);
+    const sinT = Math.sin(theta);
+    const [dx, dy] = shift;
+    return vertices.map(([x, y]) => [
+      x * cosT - y * sinT + dx,
+      x * sinT + y * cosT + dy
+    ]);
+  }
+
+  // --- 1. Render Left Panel: Two Connect-the-Dots Polygons ---
+  function renderDrums(pairIdx) {
+    const svg = document.getElementById('drums-svg');
+    svg.innerHTML = '';
+
+    const { drum1, drum2 } = PAIRS[pairIdx];
+    const pts1World = transformPolygon(drum1);
+    const pts2World = transformPolygon(drum2);
+
+    const allPts = [...pts1World, ...pts2World];
+    const xs = allPts.map(p => p[0]);
+    const ys = allPts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+
+    const pad = 26;
+    const W = 280, H = 280;
+    const scale = Math.min((W - 2 * pad) / (maxX - minX), (H - 2 * pad) / (maxY - minY));
+    const cxWorld = (minX + maxX) / 2;
+    const cyWorld = (minY + maxY) / 2;
+
+    const toScreen = ([x, y]) => [
+      W / 2 + (x - cxWorld) * scale,
+      H / 2 - (y - cyWorld) * scale
+    ];
+
+    const defs = el('defs', {}, svg);
+    const gap = 6.5;
+
+    [
+      { vertices: pts1World, color: 'var(--drum1)', opacity: '0.035' },
+      { vertices: pts2World, color: 'var(--drum2)', opacity: '0.06' }
+    ].forEach((drum, idx) => {
+      const pts = drum.vertices.map(toScreen);
+      const maskId = `poly-halo-${pairIdx}-${idx}`;
+
+      const mask = el('mask', { id: maskId }, defs);
+      el('rect', { width: W, height: H, fill: 'white' }, mask);
+      pts.forEach(([px, py]) => {
+        el('circle', { cx: px, cy: py, r: gap, fill: 'black' }, mask);
+      });
+
+      el('polygon', {
+        points: pts.map(p => p.join(',')).join(' '),
+        fill: drum.color,
+        'fill-opacity': drum.opacity,
+        mask: `url(#${maskId})`
+      }, svg);
+
+      const edgeGroup = el('g', { class: 'edge', stroke: drum.color }, svg);
+      for (let i = 0; i < pts.length; i++) {
+        const [x1, y1] = pts[i];
+        const [x2, y2] = pts[(i + 1) % pts.length];
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        if (len > 2 * gap) {
+          const ux = dx / len, uy = dy / len;
+          el('line', {
+            x1: (x1 + ux * gap).toFixed(2),
+            y1: (y1 + uy * gap).toFixed(2),
+            x2: (x2 - ux * gap).toFixed(2),
+            y2: (y2 - uy * gap).toFixed(2)
+          }, edgeGroup);
+        }
+      }
+
+      const dotGroup = el('g', { fill: drum.color }, svg);
+      pts.forEach(([px, py]) => {
+        el('circle', { cx: px.toFixed(2), cy: py.toFixed(2), r: '3.2' }, dotGroup);
+      });
+    });
+  }
+
+  // --- 2. Render Right Panel: Tufte Range-Frame Plot (Single Black Spectrum) ---
+  function renderSpectrum(pairIdx) {
+    const svg = document.getElementById('spectrum-svg');
+    svg.innerHTML = '';
+
+    const { spectrum } = PAIRS[pairIdx];
+    const W = 340, H = 280;
+
+    const axisX = 52;
+    const axisY = 232;
+
+    const dataLeft = 66;
+    const dataRight = 322;
+    const dataTop = 18;
+    const dataBottom = 216;
+
+    const logs = spectrum.map(v => Math.log(v));
+
+    const kMin = 1;
+    const kMax = logs.length;
+    const yMin = Math.min(...logs);
+    const yMax = Math.max(...logs);
+
+    const xScale = k => dataLeft + ((k - kMin) / (kMax - kMin)) * (dataRight - dataLeft);
+    const yScale = val => dataBottom - ((val - yMin) / (yMax - yMin)) * (dataBottom - dataTop);
+
+    // 1. Tufte Range-Frame X-Axis
+    const xStartPx = xScale(kMin);
+    const xEndPx = xScale(kMax);
+    el('line', {
+      x1: xStartPx.toFixed(2), y1: axisY,
+      x2: xEndPx.toFixed(2),   y2: axisY,
+      class: 'axis-line'
+    }, svg);
+
+    const xTicks = [1, 5, 10, 15, 20, 25, 30];
+    xTicks.forEach(kv => {
+      const px = xScale(kv);
+      el('line', {
+        x1: px.toFixed(2), y1: axisY,
+        x2: px.toFixed(2), y2: axisY - 4.5,
+        class: 'tick-mark'
+      }, svg);
+      const lbl = el('text', {
+        x: px.toFixed(2),
+        y: axisY + 14,
+        'text-anchor': 'middle',
+        class: 'tick-label'
+      }, svg);
+      lbl.textContent = kv;
+    });
+
+    // 2. Tufte Range-Frame Y-Axis
+    const yBottomPx = yScale(yMin);
+    const yTopPx = yScale(yMax);
+    el('line', {
+      x1: axisX, y1: yBottomPx.toFixed(2),
+      x2: axisX, y2: yTopPx.toFixed(2),
+      class: 'axis-line'
+    }, svg);
+
+    const interiorTicks = [];
+    for (let v = Math.ceil(yMin); v <= Math.floor(yMax); v++) {
+      if (Math.abs(v - yMin) > 0.28 && Math.abs(v - yMax) > 0.28) {
+        interiorTicks.push(v);
+      }
+    }
+    const yTicks = [yMin, ...interiorTicks, yMax];
+
+    yTicks.forEach(yv => {
+      const py = yScale(yv);
+      el('line', {
+        x1: axisX,       y1: py.toFixed(2),
+        x2: axisX + 4.5, y2: py.toFixed(2),
+        class: 'tick-mark'
+      }, svg);
+      const lbl = el('text', {
+        x: axisX - 7,
+        y: py.toFixed(2),
+        'text-anchor': 'end',
+        'dominant-baseline': 'central',
+        class: 'tick-label'
+      }, svg);
+      lbl.textContent = yv.toFixed(1);
+    });
+
+    // 3. Axis Titles
+    const xTitle = el('text', {
+      x: ((xStartPx + xEndPx) / 2).toFixed(2),
+      y: H - 6,
+      'text-anchor': 'middle',
+      class: 'axis-title'
+    }, svg);
+    xTitle.textContent = 'Eigenvalue index k';
+
+    const yMidPx = (yBottomPx + yTopPx) / 2;
+    const yTitle = el('text', {
+      x: 14,
+      y: yMidPx.toFixed(2),
+      'text-anchor': 'middle',
+      transform: `rotate(-90 14 ${yMidPx.toFixed(2)})`,
+      class: 'axis-title'
+    }, svg);
+    yTitle.textContent = 'log(λₖ)';
+
+    // 4. Plot Single Shared Spectrum Curve & Markers in Black
+    const pts = logs.map((val, i) => [xScale(i + 1), yScale(val)]);
+    el('polyline', {
+      points: pts.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' '),
+      fill: 'none',
+      stroke: 'var(--spectrum)',
+      'stroke-width': '1.8',
+      'stroke-linejoin': 'round'
+    }, svg);
+
+    pts.forEach(([px, py]) => {
+      el('circle', {
+        cx: px.toFixed(2),
+        cy: py.toFixed(2),
+        r: '2.7',
+        fill: 'var(--spectrum)'
+      }, svg);
+    });
+  }
+
+  let currentPair = 0;
+  function updateView() {
+    renderDrums(currentPair);
+    renderSpectrum(currentPair);
+    document.getElementById('hint-text').innerHTML =
+      `Two isospectral drums and their shared spectrum log(λ<sub>k</sub>), k = 1, …, 30. Click to toggle between pairs (${currentPair + 1} / ${PAIRS.length}).`;
+  }
+
+  document.getElementById('interactive-grid').addEventListener('click', () => {
+    currentPair = (currentPair + 1) % PAIRS.length;
+    updateView();
+  });
+
+  updateView();
+</script>
+</body>
+</html>
