@@ -34,6 +34,7 @@ toc:
   - name: Parametrizations, symmetries and architectures
   - name: "Warm-up: hearing triangular drums"
   - name: Isospectral drums of Buser, Conway, Doyle, and Semmler
+  - name: Triangular drums with incomplete information
   - name: Closing remarks
 
 ---
@@ -204,7 +205,7 @@ The problem is to reconstruct the coordinates of three points, given the spectru
 
 **Regression**
 
-Once we select a model $U_{\theta}$ that maps ${\sf spectrum}:= (\lambda_1, \dots, \lambda_p)$ to ${\sf drum}_N:=\boldsymbol{r}_1, \dots, \boldsymbol{r}_N$, the regression problem becomes optimizing a loss function:
+Once we select a model $U_{\theta}$ that maps ${\sf spectrum}\equiv(\lambda_1, \dots, \lambda_p)$ to ${\sf drum}_N\equiv\boldsymbol{r}_1, \dots, \boldsymbol{r}_N$, the regression problem becomes optimizing a loss function:
 
 $$
 \theta^\star = \arg\min_{\theta} \mathbb{E}_{\sf drum}\left[\left\|U_{\theta} ({\sf spectrum}) - {\sf drum}\right\|\right].
@@ -221,7 +222,7 @@ That is what we use for regression.
 
 **Optimization with the exact forward model**
 
-If $F({\sf drum}_N) := F(\boldsymbol{r}_1, \dots, \boldsymbol{r}_N) = (\lambda_1, \dots, \lambda_p) =: {\sf spectrum}$ is a classical algorithm that solves the forward problem, one can naturally try to find
+If $F(\boldsymbol{r}_1, \dots, \boldsymbol{r}_N) = (\lambda_1, \dots, \lambda_p)$ is a classical algorithm that solves the forward problem, one can naturally try to find
 
 $$
 \begin{split}
@@ -311,6 +312,21 @@ This is how we know that the problem is well-posed.
 Even though this task is well-posed, deep learning is still useful here. The main gain comes from computational asymmetry: the forward solver is typically a fast, well-understood numerical method, while going backward requires complicated optimization. It can be much easier to generate data with the forward solver and fit a neural network than to run direct optimization every time. As our results show, when this works, it is dramatically faster.
 
 ## Isospectral drums of Buser, Conway, Doyle, and Semmler
+
+<d-cite key="gordon1996you"></d-cite>
+
+<d-cite key="buser2010some"></d-cite>
+
+<d-figure>
+  <iframe
+    src="{{ 'assets/html/2027-04-30-deep-drums/gww_animation.html' | relative_url }}"
+      width="100%"
+      height="450"
+    style="border: none; overflow: hidden; border-radius: 8px;"
+    loading="lazy"
+    title="smooth parametric family of GWW drums">
+  </iframe>
+</d-figure>
 
 <d-figure>
   <iframe

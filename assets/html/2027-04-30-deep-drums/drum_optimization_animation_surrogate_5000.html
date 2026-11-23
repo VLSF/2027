@@ -712,12 +712,20 @@ function tick(now) {
     if (accumFrames >= 1) {
       const step = Math.floor(accumFrames);
       accumFrames -= step;
-      const next = (currentEpoch + step) % totalEpochs;
-      renderEpoch(next);
+      const next = currentEpoch + step;
+      if (next >= totalEpochs - 1) {
+        renderEpoch(totalEpochs - 1);
+        isPlaying = false;
+        accumFrames = 0;
+        playBtn.textContent = 'Play';
+      } else {
+        renderEpoch(next);
+      }
     }
   }
   requestAnimationFrame(tick);
 }
+
 
 playBtn.addEventListener('click', () => {
   isPlaying = !isPlaying;
