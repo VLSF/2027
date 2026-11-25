@@ -118,8 +118,63 @@ While the inverse problem is notoriously difficult, the forward problem is fairl
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Solution of the forward problem: computing the spectrum of the drum from its boundary</summary>
 
-Finite element discretization, eigensolvers and all that.
+Let $\Gamma$ be the polygon enclosed by the drum's boundary. We start with $-\Delta u = \lambda u$ in $\Gamma$ and $u=0$ on $\partial \Gamma$. $\Gamma$ is divided into triangles. For each interior mesh vertex $p_i$, we define a basis function $\psi_i$ by setting its value to one at $p_i$, zero at every other vertex, and linearly interpolating those values over each triangle. Function $\psi_i$ is continuous across the mesh, since along the shared edge both triangles interpolate the same two endpoint values. Along the boundary it vanishes because the values at both endpoints of every boundary edge are zero. 
 
+We approximate a vibration mode $u$ by a linear combination of these basis functions,
+
+$$
+u_h(x,y)=\sum_i u_i\,\psi_i(x,y),
+\qquad u_i=u_h(p_i).
+$$
+
+Coefficients $u_i$ are the unknown we solve for.
+
+Multiplying by a test function $v$ that also vanishes on the boundary and integrating by parts gives the weak formulation
+
+$$
+\int_\Gamma \nabla u\cdot\nabla v\,\mathrm dx
+=
+\lambda\int_\Gamma uv\,\mathrm dx.
+$$
+
+The boundary term vanishes since $v=0$ on $\partial \Gamma$. We substitute $u_h$ for $u$ and require this equation to hold for every basis function:
+
+$$
+\int_\Gamma \nabla u_h\cdot\nabla\psi_i\,\mathrm dx
+=
+\lambda_h\int_\Gamma u_h\psi_i\,\mathrm dx.
+$$
+
+Expanding $u_h$ in the basis gives one equation for each interior vertex $i$:
+
+$$
+\sum_j u_j\underbrace{\int_\Gamma\nabla\psi_i\cdot\nabla\psi_j\,\mathrm dx}_{K_{ij}}
+=
+\lambda_h\sum_j u_j\underbrace{\int_\Gamma\psi_i\psi_j\,\mathrm dx}_{M_{ij}}.
+$$
+
+Collecting these equations gives $K\mathbf u=\lambda_h M\mathbf u$, where $\mathbf u=(u_1,\ldots,u_n)^\mathsf T$ holds the coefficients that determine $u_h$. The eigenvalue $\lambda_h$ from this matrix problem approximates an eigenvalue $\lambda$ of the original drum.
+
+We compute the integrals triangle by triangle. On a triangle $T$ of area $A_T$, let $N_i$ be the linear interpolant with value one at local vertex $i$ and zero at the other two. Since its gradient is constant
+
+$$
+K^{(T)}_{ij}=A_T\,\nabla N_i\cdot\nabla N_j.
+$$
+
+And integrating the products $N_i N_j$ gives
+
+$$
+M^{(T)}=\frac{A_T}{12}
+\begin{pmatrix}
+2&1&1\\
+1&2&1\\
+1&1&2
+\end{pmatrix}.
+$$
+
+We add each triangle's contribution at the corresponding mesh vertex indices. The matrices are sparse because an entry can receive a contribution only when its two vertices belong to the same triangle.
+
+Solving $K\mathbf u=\lambda_h M\mathbf u$ gives one eigenvalue per interior mesh vertex, counting multiplicities. We order them as $\lambda_{1,h}\leq\lambda_{2,h}\leq\cdots$. The first $m$ entries approximate the first $m$ eigenvalues of the drum.
 </details>
 
 So, can one hear the shape of a drum? In full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Why, yes, we know that they sound different!</d-footnote>
