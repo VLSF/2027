@@ -118,18 +118,18 @@ While the inverse problem is notoriously difficult, the forward problem is fairl
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Solution of the forward problem: computing the spectrum of the drum from its boundary</summary>
 
-Let $\Gamma$ be the polygon enclosed by the drum's boundary. We start with $-\Delta u = \lambda u$ in $\Gamma$ and $u=0$ on $\partial \Gamma$. $\Gamma$ is divided into triangles. For each interior mesh vertex $p_i$, we define a basis function $\psi_i$ by setting its value to one at $p_i$, zero at every other vertex, and linearly interpolating those values over each triangle. Function $\psi_i$ is continuous across the mesh, since along the shared edge both triangles interpolate the same two endpoint values. Along the boundary it vanishes because the values at both endpoints of every boundary edge are zero. 
+Let $$\Gamma$$ be the polygon enclosed by the drum's boundary. We start with $$-\Delta u = \lambda u$$ in $$\Gamma$$ and $$u=0$$ on $$\partial \Gamma$$. $$\Gamma$$ is divided into triangles. For each interior mesh vertex $$p_i$$, we define a basis function $$\psi_i$$ by setting its value to one at $$p_i$$, zero at every other vertex, and linearly interpolating those values over each triangle. Function $$\psi_i$$ is continuous across the mesh, since along the shared edge both triangles interpolate the same two endpoint values. Along the boundary it vanishes because the values at both endpoints of every boundary edge are zero. 
 
-We approximate a vibration mode $u$ by a linear combination of these basis functions,
+We approximate a vibration mode $$u$$ by a linear combination of these basis functions,
 
 $$
 u_h(x,y)=\sum_i u_i\,\psi_i(x,y),
 \qquad u_i=u_h(p_i).
 $$
 
-Coefficients $u_i$ are the unknown we solve for.
+Coefficients $$u_i$$ are the unknown we solve for.
 
-Multiplying by a test function $v$ that also vanishes on the boundary and integrating by parts gives the weak formulation
+Multiplying by a test function $$v$$ that also vanishes on the boundary and integrating by parts gives the weak formulation
 
 $$
 \int_\Gamma \nabla u\cdot\nabla v\,\mathrm dx
@@ -137,7 +137,7 @@ $$
 \lambda\int_\Gamma uv\,\mathrm dx.
 $$
 
-The boundary term vanishes since $v=0$ on $\partial \Gamma$. We substitute $u_h$ for $u$ and require this equation to hold for every basis function:
+The boundary term vanishes since $$v=0$$ on $$\partial \Gamma$$. We substitute $$u_h$$ for $$u$$ and require this equation to hold for every basis function:
 
 $$
 \int_\Gamma \nabla u_h\cdot\nabla\psi_i\,\mathrm dx
@@ -145,7 +145,7 @@ $$
 \lambda_h\int_\Gamma u_h\psi_i\,\mathrm dx.
 $$
 
-Expanding $u_h$ in the basis gives one equation for each interior vertex $i$:
+Expanding $$u_h$$ in the basis gives one equation for each interior vertex $$i$$:
 
 $$
 \sum_j u_j\underbrace{\int_\Gamma\nabla\psi_i\cdot\nabla\psi_j\,\mathrm dx}_{K_{ij}}
@@ -153,15 +153,15 @@ $$
 \lambda_h\sum_j u_j\underbrace{\int_\Gamma\psi_i\psi_j\,\mathrm dx}_{M_{ij}}.
 $$
 
-Collecting these equations gives $K\mathbf u=\lambda_h M\mathbf u$, where $\mathbf u=(u_1,\ldots,u_n)^\mathsf T$ holds the coefficients that determine $u_h$. The eigenvalue $\lambda_h$ from this matrix problem approximates an eigenvalue $\lambda$ of the original drum.
+Collecting these equations gives $$K\mathbf u=\lambda_h M\mathbf u$$, where $$\mathbf u=(u_1,\ldots,u_n)^\mathsf T$$ holds the coefficients that determine $$u_h$$. The eigenvalue $$\lambda_h$$ from this matrix problem approximates an eigenvalue $$\lambda$$ of the original drum.
 
-We compute the integrals triangle by triangle. On a triangle $T$ of area $A_T$, let $N_i$ be the linear interpolant with value one at local vertex $i$ and zero at the other two. Since its gradient is constant
+We compute the integrals triangle by triangle. On a triangle $$T$$ of area $$A_T$$, let $$N_i$$ be the linear interpolant with value one at local vertex $$i$$ and zero at the other two. Since its gradient is constant
 
 $$
 K^{(T)}_{ij}=A_T\,\nabla N_i\cdot\nabla N_j.
 $$
 
-And integrating the products $N_i N_j$ gives
+And integrating the products $$N_i N_j$$ gives
 
 $$
 M^{(T)}=\frac{A_T}{12}
@@ -174,7 +174,8 @@ $$
 
 We add each triangle's contribution at the corresponding mesh vertex indices. The matrices are sparse because an entry can receive a contribution only when its two vertices belong to the same triangle.
 
-Solving $K\mathbf u=\lambda_h M\mathbf u$ gives one eigenvalue per interior mesh vertex, counting multiplicities. We order them as $\lambda_{1,h}\leq\lambda_{2,h}\leq\cdots$. The first $m$ entries approximate the first $m$ eigenvalues of the drum.
+Solving $$K\mathbf u=\lambda_h M\mathbf u$$ gives one eigenvalue per interior mesh vertex, counting multiplicities. We order them as $$\lambda_{1,h}\leq\lambda_{2,h}\leq\cdots$$. The first $$m$$ entries approximate the first $$m$$ eigenvalues of the drum.
+
 </details>
 
 So, can one hear the shape of a drum? In full accordance with [the law of headlines](https://en.wikipedia.org/wiki/Betteridge%27s_law_of_headlines), the 1992 article by Gordon, Webb, and Wolpert answered the question with a resounding 'no' <d-cite key="gordon1992isospectral"></d-cite>. There are distinct drums with exactly the same spectra, and a pair of them can be found below.<d-footnote>Why, yes, we know that they sound different!</d-footnote>
@@ -234,7 +235,112 @@ General explanation of the $D_N$ and $E(N)$. Definition of equivariant and invar
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Ring transformers: invariant and equivariant architectures</summary>
 
-A description of a particular architecture (with both invariant and equivariant branches) that we use.
+The Ring Transformer takes a closed polygon $$X=(x_1, \cdots, x_N)$$ and a vector $$c$$ containing additional information, such as the measured spectrum. Each model uses a fixed number of vertices $$N$$. The architecture has two outputs. The **invariant** output describes the polygon as a whole, for example with a score that stays the same under symmetries described above. The **equivariant** output assigns a displacement vector to each vertex. These vectors rotate and reflect with the polygon, follow their vertices when we relabel them, and stay the same when we translate the polygon.
+
+**Removing dependence on the drum's position and orientation.**
+
+We subtract the mean vertex position from each vertex and build the Gram matrix $$G$$, whose entries are the dot product of the centered vertices.
+
+$$
+\overline{\mathbf x}=\frac1N\sum_{j=1}^N\mathbf x_j,
+\qquad
+\mathbf y_i=\mathbf x_i-\overline{\mathbf x},
+\qquad
+G_{ij}=\mathbf y_i^\mathsf T\mathbf y_j.
+$$
+
+If we transform every vertex by $$\mathbf x'_i=Q\mathbf x_i+\mathbf t$$, where Q is a rotation or reflection, then the mean transforms by the same rule. Subtracting it cancels $$\mathbf t$$ and gives $$\mathbf y'_i=Q\mathbf y_i$$. Taking dot products removes the dependence on Q as well, since
+
+$$
+G'_{ij}=(Q\mathbf y_i)^\mathsf T(Q\mathbf y_j)
+=\mathbf y_i^\mathsf TQ^\mathsf TQ\mathbf y_j
+=G_{ij}.
+$$
+
+Thus $$G$$ is invariant under the translations, rotations, and reflections in $$O(2)$$. It retains the distances between vertices, since $$\|\mathbf x_i-\mathbf x_j\|^2=G_{ii}+G_{jj}-2G_{ij}$$. The entries of $$G$$ are still indexed by vertex labels. Changing the starting vertex shifts both its rows and its columns.
+
+**Constructing the ring tokens.**
+
+A token is a feature vector passed to the Transformer. For vertex $$i$$, we take row $$i$$ of $$G$$ and read it in boundary order starting at $$G_{ii}$$ wrapping around at the end.
+
+$$
+\mathbf r_i=(G_{ii},G_{i,i+1},\ldots,G_{i,i+N-1}).
+$$
+
+For a triangle (i.e. when $$N=3$$), the three tokens are $$(G_{11},G_{12},G_{13})$$, $$(G_{22},G_{23},G_{21})$$, and $$(G_{33},G_{31},G_{32})$$. The first entry always refers to the vertex itself, the second to its next neighbor, and so on. If we change the starting vertex by $$s$$ positions, $$G'_{i,i+k}=G_{i+s, i+s+k}$$ and hence $$\mathbf g'_i = \mathbf g_{i+s}$$. The whole sequence of tokens shifts, and each token keeps its entries in the same order. A shared learned projection to these $$N$$ tokens is applied and a separate projection to create one more token from the context $$c$$ is used.
+
+**Attention with a ciculant bias.**
+
+Each attention head computes a score for every pair of tokens. The score for query token $$i$$ and key token $$j$$ is
+
+$$
+A_{ij}=\frac{\mathbf q_i^\mathsf T\mathbf k_j}{\sqrt d}+B_{ij},
+$$
+
+where $$\mathbf q_i$$ and $$\mathbf k_j$$ are learned projections of the tokens and $$d$$ is their dimension. The scores for a given query are passed through a softmax over the keys to obtain the attention weights. The bias $$B_{ij}$$ gives the head access to the relative positions of the tokens before this softmax.
+
+For two vertex tokens, we use $$B_{ij} = b_{(j-i) \bmod N}$$. Offset $$0$$ means the same vertex, $$1$$ means the next vertex along the boundary, and $$N-1$$ means the previous vertex. The vertex block of $$B$$ is circulant, meaning each row is the preceding row shifted by one position with wraparound. For $$N=3$$, the full bias matrix is
+
+$$
+B=
+\begin{pmatrix}
+\gamma&\alpha&\alpha&\alpha\\
+\beta&b_0&b_1&b_2\\
+\beta&b_2&b_0&b_1\\
+\beta&b_1&b_2&b_0
+\end{pmatrix}.
+$$
+
+The first row and column belong to the context token. It has a bias $$\gamma$$ for attending to itself, a shared bias $$\alpha$$ for attending to any vertex, and a shared bias $$\beta$$ for receiving attention from any vertex. These parameters are learned separately for each attention head and layer.
+
+Under a cyclic relabeling, the indices $$i$$ and $$j$$ both shift by the same amount, so their difference stays the same. Each pair of vertex tokens therefore keeps its bias, and the context biases are unchanged because they are shared across vertices. The attention weights and their weighted sums follow the relabeling. The remaining operations in each layer act on each token in the same way, so the final vertex tokens shift together and the final context token stays fixed.
+
+**Reading out the two outputs.**
+
+A learned linear layer maps the final context token to the polygon-level output $$z$$. The context token depends on the vertex coordinates through $$G$$, so translating, rotating, or reflecting the polygon leaves $$z$$ unchanged.
+
+A second linear layer is shared across the vertex tokens. It reads $$N$$ coefficients $$a_{i,k}$$ from token $$i$$, with one coefficient for each step $$k$$ around the boundary. The output vector at vertex $$i$$ is
+
+$$
+\boldsymbol\delta_i=\sum_{k=0}^{N-1}a_{i,k}\,\mathbf y_{i+k},
+$$
+
+where the vertex indices wrap around. For a triangle, this gives
+
+$$
+\begin{aligned}
+\boldsymbol\delta_1 &= a_{1,0}\mathbf y_1+a_{1,1}\mathbf y_2+a_{1,2}\mathbf y_3,\\
+\boldsymbol\delta_2 &= a_{2,0}\mathbf y_2+a_{2,1}\mathbf y_3+a_{2,2}\mathbf y_1,\\
+\boldsymbol\delta_3 &= a_{3,0}\mathbf y_3+a_{3,1}\mathbf y_1+a_{3,2}\mathbf y_2.
+\end{aligned}
+$$
+
+In each row, the first coefficient multiplies the centered position of the current vertex, the second multiplies that of the next vertex, and the third completes the loop.
+
+If the same triangle is written in the order $$(\mathbf r_2,\mathbf r_3,\mathbf r_1)$$. The old second vertex token is now first, so it supplies the old second row of coefficients. Those coefficients still multiply $$\mathbf y_2,\mathbf y_3,\mathbf y_1$$ in that order. The first output in the new numbering is therefore $$\boldsymbol\delta'_1=\boldsymbol\delta_2$$. The full vector output becomes $$(\boldsymbol\delta_2,\boldsymbol\delta_3,\boldsymbol\delta_1)$$, and the polygon-level output $$z$$ stays the same.
+
+A rotation or reflection $$Q$$ leaves the coefficients $$a_{i,k}$$ unchanged and sends each centered vertex vector $$\mathbf y_j$$ to $$Q\mathbf y_j$$. Applying this to the sum gives $$Q\boldsymbol\delta_i$$. A translation leaves the centered vertices unchanged, so it leaves the output vectors unchanged as well.
+
+**Accounting for traversal in both directions.**
+
+Reversing the traversal changes which vertex comes next. For example, in the order $$(\mathbf r_1,\mathbf r_2,\mathbf r_3)$$, going from $$\mathbf r_2$$ to $$\mathbf r_3$$ takes one step along the boundary. In the reversed order $$(\mathbf r_3,\mathbf r_2,\mathbf r_1)$$, it takes two steps, through $$\mathbf r_1$$. The attention bias for this pair therefore changes from $$b_1$$ to $$b_2$$. In general, if another vertex is $$k$$ steps ahead in one direction, it is $$N-k$$ steps ahead in the other.
+
+Reversing the traversal also changes the order of the dot products within each vertex token. Since the biases for different offsets are learned separately, a single pass can depend on the traversal direction. We account for this by running the same network on both vertex orders and averaging its outputs.
+
+Let $$R$$ reverse a sequence, so $$RX=(\mathbf r_N,\ldots,\mathbf r_1)$$. With $$c$$ held fixed, write $$z(X)$$ and $$\Delta(X)$$ for the polygon-level output and the list of vertex vectors from one pass. We combine the results as
+
+$$
+\begin{aligned}
+z_{\mathrm{avg}}(X)
+&=\tfrac12\bigl(z(X)+z(RX)\bigr),\\
+\Delta_{\mathrm{avg}}(X)
+&=\tfrac12\bigl(\Delta(X)+R\Delta(RX)\bigr).
+\end{aligned}
+$$
+
+The vectors in $$\Delta(RX)$$ are listed in reverse vertex order. Applying $$R$$ puts them back in the original order, so each average combines two vectors for the same vertex.
+
+Reversing the input exchanges the two passes because reversing twice returns the original order. The polygon-level average therefore stays the same, and the list of averaged vectors reverses along with the vertices.
 
 </details>
 
