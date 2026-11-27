@@ -174,7 +174,7 @@ $$
 
 We add each triangle's contribution at the corresponding mesh vertex indices. The matrices are sparse because an entry can receive a contribution only when its two vertices belong to the same triangle.
 
-Solving $$K\mathbf u=\lambda_h M\mathbf u$$ gives one eigenvalue per interior mesh vertex, counting multiplicities. We order them as $$\lambda_{1,h}\leq\lambda_{2,h}\leq\cdots$$. The first $$m$$ entries approximate the first $$m$$ eigenvalues of the drum.
+Solving $$K\mathbf u=\lambda_h M\mathbf u$$ gives one eigenvalue per interior mesh vertex, counting multiplicities. We order them as $$\lambda_{1,h}\leq\lambda_{2,h}\leq\cdots$$. The first $$p$$ entries approximate the first $$p$$ eigenvalues of the drum.
 
 </details>
 
@@ -348,7 +348,6 @@ Reversing the input exchanges the two passes because reversing twice returns the
 
 The simplest possible drum is a triangle, so we start by building a dataset of (triangle, the first 30 eigenvalues) pairs.<d-footnote>The setup is a standard one for statistical learning problems: drums are drawn from a distribution $p$, and the task is to reconstruct the drum shape from its spectrum <span style="font-style: italic;">within</span> this distribution. The setup is certainly a much weaker version of Kac's question, but it better corresponds to practical situations anyway. We usually have at least some idea about objects encountered in a real setting, so we encode this knowledge in the distribution $p$.</d-footnote>
 
-
 A portion of the dataset is shown below.
 
 <d-figure>
@@ -377,7 +376,26 @@ Once the distance between drums is properly defined (see above), standard first-
 <details class="tech-details" style="background: rgba(120, 140, 220, 0.12) !important; background-color: rgba(120, 140, 220, 0.12) !important; border: none !important; border-radius: 6px !important; padding: 0.75rem 0.75rem !important;" markdown="1">
 <summary style="background: transparent !important; background-color: transparent !important; cursor: pointer; font-weight: 400;">Transformer for the regression problem</summary>
 
-That is what we use for regression.
+The regression model $$U_{\theta}$$ takes the $$p=30$$ eigenvalues of a triangular drum and predicts three vertices $$(\widehat{\boldsymbol r}_1,\widehat{\boldsymbol r}_2,\widehat{\boldsymbol r}_3)$$. A learned projection maps the entire spectrum to one token with $$128$$ features. We append three learned vertex tokens, one for each position in the output list. Each vertex token starts from the same learned vector across input spectra and acquires information about the particular drum through attention.
+
+The four tokens pass through five Transformer blocks with four attention heads each. Every token can attend to all four, so the vertex tokens can use the spectrum and exchange information with one another. Each block applies self-attention and a feed-forward network in succession, with normalisation before each operation and a residual connection around it. After the last block, the three vertex tokens are normalised and the same linear readout is applied to each. The readout gives two coordinates per token, so one evaluation of $$U_{\theta}$$ produces one tirangle.
+
+**Training with the drum's symmetries.**
+
+The same spectrum can describe a triangle at any position or orientation and with any choice of starting vertex or traversal direction. To compare a prediction with its target, the mean vertex position is subtructed from each at first. Let $$\mathbf y_i$$ and $$\widehat{\mathbf y}_i$$ be for the centered target and predicted vertices.
+
+For each of the six vertex orderings $$\pi\in D_3$$, we find the rotation or reflection $$Q_{\pi}$$ that minimises the sum of squared distances between the corresponding vertices. This is the orthogonal Procrustes alignment. After alignment, each vertex displacement is divided by the distance of the corresponding target vertex from its center and take the mean. The loss for the triangle is
+
+$$
+\mathcal L_{\theta}
+=
+\min_{\pi\in D_3}
+\frac13\sum_{i=1}^3
+\frac{\bigl\|\boldsymbol y_i-Q_\pi\widehat{\boldsymbol y}_{\pi(i)}\bigr\|_2}
+{\|\boldsymbol y_i\|_2}.
+$$
+
+The alignment preserves the size of the predicted triangle. This loss is averaged over the training examples to obtain the regression objective above.
 
 </details>
 
